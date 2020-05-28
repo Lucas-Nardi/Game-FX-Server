@@ -34,12 +34,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaPlayer.Status;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javax.swing.JOptionPane;
 
 /**
@@ -84,9 +86,15 @@ public class Jogo extends Application {
     private Jogador jogador2;
 
     //private LinkedList<Jogador> lista;
-    //private Jogador player;
-    private Media som;
-    private MediaPlayer rodarSom;
+    
+    private Media backgroundSound;
+    private Media fire;
+    private Media explosion;
+    private Media revive;
+    private MediaPlayer mainSound;
+    private MediaPlayer fire1Sound;
+    private MediaPlayer fire2Sound;
+    private MediaPlayer explosionSound;
 
     ServerSocket slisten;
     private Socket client = null;
@@ -96,7 +104,7 @@ public class Jogo extends Application {
     @Override
     public void start(Stage stage) throws IOException, ClassNotFoundException {
 
-        //criarSom();
+        
         tela = stage;
         tela.setTitle("SERVIDOR (A/D)");
         tela.setResizable(false);
@@ -108,13 +116,13 @@ public class Jogo extends Application {
         canvas.setHeight(700);
         canvas.setWidth(840);
 
-        //criarJogador();
         GraphicsContext gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
 
         criarJogador();
         server();
         paint(root, theScene);
+        criarSom();
         loop = new AnimationTimer() {
 
             @Override
@@ -226,13 +234,32 @@ public class Jogo extends Application {
                     }
                 });
 
-//                if(rodarSom.getStatus() == MediaPlayer.Status.PLAYING){
-//                    double ct = rodarSom.getCurrentTime().toSeconds();
-//                    if(ct > 60){
-//                        rodarSom.stop();
-//                        rodarSom.play();
-//                    }
-//                }
+
+                if (mainSound.getStatus() == Status.PLAYING) {   // TEMPO DE DURAÇÃO DE CADA SOM
+                    double ct = mainSound.getCurrentTime().toSeconds();
+                    if (ct > 313) { // RESETAR A MUSICA --- 4 min  e 37 segundos Min // 277 Segundos
+                        mainSound.stop();
+                        mainSound.play();
+                    }
+                }
+                if(explosionSound.getStatus() == Status.PLAYING){
+                    double ct = explosionSound.getCurrentTime().toSeconds();
+                    if (ct >= 1.5) {
+                        mainSound.stop();                        
+                    }
+                }
+                if(fire2Sound.getStatus() == Status.PLAYING){
+                    double ct = fire2Sound.getCurrentTime().toMillis();
+                    if (ct >= 800) { 
+                        fire2Sound.stop();                        
+                    }
+                }
+                if(fire1Sound.getStatus() == Status.PLAYING){
+                    double ct = fire1Sound.getCurrentTime().toSeconds();
+                    if (ct >= 1.5) { 
+                        fire1Sound.stop();                        
+                    }
+                }
                 tempoCriarBala++;
                 tempoCriarAlien++;
             }
@@ -245,7 +272,23 @@ public class Jogo extends Application {
 //        Menu novo = new Menu(l);
 //        novo.start(new Stage());
 //    }
+    public void criarSom() {
 
+        backgroundSound = new Media(this.getClass().getResource("/Som/game03.mp4").toExternalForm());
+        mainSound = new MediaPlayer(backgroundSound);
+        mainSound.setStartTime(Duration.seconds(220));
+        mainSound.setVolume(0.15);
+        mainSound.play();
+        explosion = new Media(this.getClass().getResource("/Som/exposion.mp3").toExternalForm());
+        explosionSound = new MediaPlayer(explosion);
+        
+        fire = new Media(this.getClass().getResource("/Som/bala1.mp3").toExternalForm());
+        fire1Sound = new MediaPlayer(fire);
+        
+        fire2Sound = new MediaPlayer(new Media(this.getClass().getResource("/Som/bala3.mp3").toExternalForm()));
+        fire2Sound.setVolume(0.2);
+    }
+    
     private void criarBala(Group root) {
 
         Rectangle rec = new Rectangle();
@@ -261,6 +304,8 @@ public class Jogo extends Application {
         balaImage.add(rec);
         Bala bullet = new Bala(pox2 + 10, poy2 - 50);
         balaObjeto.add(bullet);
+        fire2Sound.stop();
+        fire2Sound.play();
 
         try {
             outObject.writeObject(new DadosDoJogo(pox2, false, true, bullet));
@@ -307,6 +352,8 @@ public class Jogo extends Application {
                             aliImage.setFill(new ImagePattern(new Image("/Imagem/explosao.png")));
                             score = score + alien.getPontuacao();
                             scoreImage.setText(Integer.toString(score));
+                            explosionSound.stop();
+                            explosionSound.play();
                         }
                         for (int k = 0; k < root.getChildren().size(); k++) {
 
@@ -385,6 +432,8 @@ public class Jogo extends Application {
         rec.setLayoutY(bala.getPosY());
         root.getChildren().add(rec);
         balaImage.add(rec);
+        fire1Sound.stop();
+        fire1Sound.play();
     }
 
     public void criarAlien(Group root) {
@@ -402,7 +451,7 @@ public class Jogo extends Application {
 
         Alien a;
 
-        if (score >= 100) {
+        if (score >= 1000) {
 
             a = new Alien(2, 200);
             a.setPosX(posiX);
@@ -508,7 +557,7 @@ public class Jogo extends Application {
                         if (qtdVida2 <= 0) {
 
                             nave2.setVisible(false);
-                            qtdVida1 = qtdVida2 - 2;
+                            qtdVida2 = qtdVida2 - 2;
                         }
                         vida2.setProgress(qtdVida2);
                     }
@@ -539,9 +588,6 @@ public class Jogo extends Application {
             } else { // NAO COLIDIU ENTAO O ALIEN PODE PROSSEGUIR
 
                 if (static_bloc.getLayoutY() > 705) {  // ALIEN PASSOU PELAS NAVES 
-
-                    qtdVida1 = vida1.getProgress();
-                    qtdVida2 = vida2.getProgress();
 
                     if (vida1.getProgress() > 0) { // Fazer a animação da vida ir de um lado para o outro
 
@@ -594,7 +640,7 @@ public class Jogo extends Application {
 
                             alienImage.remove(i);
                             alienObjeto.remove(i);
-                            root.getChildren().remove(j);
+                            root.getChildren().remove(j);                            
                         }
                     }
 
@@ -736,7 +782,8 @@ public class Jogo extends Application {
         vida1.setLayoutY(33);
         vida1.setStyle("-fx-accent: orange;");
         vida1.setProgress(1.0);
-        nome1 = new Label(jogador1.getNome());
+        //nome1 = new Label(jogador1.getNome());
+         nome1 = new Label("Jogador 1");
         nome1.setPrefSize(153, 18);
         nome1.setLayoutX(9);
         nome1.setLayoutY(9);
@@ -757,7 +804,8 @@ public class Jogo extends Application {
         vida2.setLayoutY(33);
         vida2.setStyle("-fx-accent: blue;");
         vida2.setProgress(1.0);
-        nome2 = new Label(jogador2.getNome());
+        //nome2 = new Label(jogador2.getNome());
+        nome2 = new Label("Jogador 2");
         nome2.setPrefSize(153, 18);
         nome2.setLayoutX(693);
         nome2.setLayoutY(9);
@@ -782,12 +830,6 @@ public class Jogo extends Application {
         scoreImage.setPrefSize(353, 65);
 
         root.getChildren().addAll(background, vida1, vida2, nome1, nome2, nave1, nave2, palavraScore, scoreImage);
-    }
-
-    public void criarSom() {
-        som = new Media(this.getClass().getResource("/musica/Celestial.mp3").toExternalForm());
-        rodarSom = new MediaPlayer(som);
-        rodarSom.play();
     }
 
     public static void main(String[] args) {
