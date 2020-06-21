@@ -1,5 +1,6 @@
 package Tela;
 
+import Objetos.ListaJogador;
 import Objetos.Alien;
 import Objetos.Bala;
 import Objetos.DadosDoJogo;
@@ -7,25 +8,21 @@ import Objetos.Jogador;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
@@ -100,7 +97,14 @@ public class Jogo extends Application {
     private Socket client = null;
     ObjectInputStream inObject;
     ObjectOutputStream outObject;
+    
+    private ListaJogador lista;
 
+    public Jogo(ListaJogador lista){
+        
+        this.lista = lista;
+    }
+    
     @Override
     public void start(Stage stage) throws IOException, ClassNotFoundException {
 
@@ -130,14 +134,25 @@ public class Jogo extends Application {
 
                 if (nave1.isVisible() == false && nave2.isVisible() == false) {
                     //Voltar para o menu 
-
-                    jogador1.setPontuacao(score);
-                    jogador2.setPontuacao(score);
+                    
+                    System.out.println(score);
+                    if(jogador1.getPontuacao() <= score){                        
+                        jogador1.setPontuacao(score);
+                    }
+                    if(jogador2.getPontuacao() <= score){
+                        jogador2.setPontuacao(score);
+                    }
+                    
+                    jogador1.setPartidaJogadas();
+                    jogador2.setPartidaJogadas();
+                    lista.adicionar(jogador1);
+                    lista.adicionar(jogador2);
                     pararServer = true;
+                    
                     loop.stop();
                     tela.close();
-                    //rodarSom.stop();
-                    //irMenu(lista);
+                    mainSound.stop();
+                    irMenu(lista);
 
                 }
                 if (novaBala == true) {
@@ -267,11 +282,12 @@ public class Jogo extends Application {
         loop.start();
         stage.show();
     }
-//
-//    public void irMenu(LinkedList<Jogador> l) {
-//        Menu novo = new Menu(l);
-//        novo.start(new Stage());
-//    }
+
+    public void irMenu(ListaJogador  l) {
+        Menu novo = new Menu(l);
+        novo.start(new Stage());
+    }
+    
     public void criarSom() {
 
         backgroundSound = new Media(this.getClass().getResource("/Som/game03.mp4").toExternalForm());
@@ -656,8 +672,8 @@ public class Jogo extends Application {
     }
 
     private void server() throws IOException, ClassNotFoundException {
-        Jogador jogador1;
-
+        Jogador jogador1,player;
+        
         slisten = new ServerSocket(16868);
         System.out.println("Aguardando Conexao.");
         client = slisten.accept();
@@ -665,7 +681,16 @@ public class Jogo extends Application {
         inObject = new ObjectInputStream(client.getInputStream());
 
         jogador1 = (Jogador) inObject.readObject();
-        this.jogador1 = jogador1;
+       
+        player = lista.remover(jogador1.getNome());
+        if (player == null) { // JOGADOR NÂO EXISTE
+            
+            this.jogador1 = new Jogador(jogador1.getNome());    
+        
+        }else{
+            this.jogador1 = new Jogador(player.getNome());
+        }
+        
         outObject.writeObject(jogador2);
         outObject.flush();
 
@@ -677,15 +702,13 @@ public class Jogo extends Application {
                 DadosDoJogo data;
                 Bala bala;
                 while (true) {
-
                     try {
 
-                        if (pararServer == true) {
-
+                        if (pararServer == true) {  
                             outObject.close();
                             inObject.close();
                             client.close();
-                            break;
+                            return;
                         }
 
                         System.out.println("ESPERANDO DADOS DO JOGADOR 1");
@@ -743,13 +766,11 @@ public class Jogo extends Application {
             }
 
         } while (i == 2 || i == 1);
-        //jogador2 = lista.remover(nome1);
-        //if (jogador2 == null) { // JOGADOR NÂO EXISTE
-        jogador2 = new Jogador(nome1);
-
-        //novoJogador = true;
-        //}
-        //novoJogador = false;
+        jogador2 = lista.remover(nome1);
+        if (jogador2 == null) { // JOGADOR NÂO EXISTE
+            
+            jogador2 = new Jogador(nome1);    
+        }
     }
 
     public void paint(Group root, Scene theScene) {
@@ -783,7 +804,7 @@ public class Jogo extends Application {
         vida1.setStyle("-fx-accent: orange;");
         vida1.setProgress(1.0);
         //nome1 = new Label(jogador1.getNome());
-         nome1 = new Label("Jogador 1");
+        nome1 = new Label(jogador1.getNome());
         nome1.setPrefSize(153, 18);
         nome1.setLayoutX(9);
         nome1.setLayoutY(9);
@@ -805,7 +826,7 @@ public class Jogo extends Application {
         vida2.setStyle("-fx-accent: blue;");
         vida2.setProgress(1.0);
         //nome2 = new Label(jogador2.getNome());
-        nome2 = new Label("Jogador 2");
+        nome2 = new Label(jogador2.getNome());
         nome2.setPrefSize(153, 18);
         nome2.setLayoutX(693);
         nome2.setLayoutY(9);

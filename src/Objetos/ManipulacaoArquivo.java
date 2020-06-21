@@ -17,7 +17,10 @@ public class ManipulacaoArquivo {
             FileInputStream file = new FileInputStream(nome + ".txt");
             input = new ObjectInputStream(file);
         } catch (IOException err) {
+            
+            System.out.println("Nome do arquivo: " + nome + ".txt");
             System.err.println("Erro ao ler o arquivo.");
+            System.out.println("ARQUIVO NAO EXISTE");
             System.exit(1);
         }
     }

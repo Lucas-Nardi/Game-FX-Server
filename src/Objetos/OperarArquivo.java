@@ -17,7 +17,10 @@ public class OperarArquivo {
             File file = new File(arqJogador); // ----Arquivo para clientes
             if (!file.exists()) { // Arquivo de clientes não existe
                 file.createNewFile();
+                System.out.println("Arquivo Criado");
+                
             } else { // Arquivo existe e eu posso ler
+                System.out.println("Lendo arquivo");
                 mani.openToRead(arqJogador);
                 jogador = (Jogador) mani.lerObjeto();
                 while (jogador != null) {

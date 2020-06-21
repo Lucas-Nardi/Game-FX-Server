@@ -1,8 +1,6 @@
 package Objetos;
 
-import java.io.Serializable;
-
-public class ListaJogador implements Serializable{
+public class ListaJogador {
 
     private NodeJogador inicio;
     private NodeJogador fim;
